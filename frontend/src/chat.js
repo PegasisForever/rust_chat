@@ -6,6 +6,7 @@ export default class ChatPage extends Component {
     state = {
         users: [],
         messages: [],
+        input: "",
     }
 
     constructor(props) {
@@ -33,6 +34,27 @@ export default class ChatPage extends Component {
         })
     }
 
+    onSend = e => {
+        e.preventDefault()
+        this.connection.request({
+            "typ": "msg",
+            "time": Math.floor(Date.now() / 1000), //todo use milliseconds
+            "text": this.state.input,
+        }).then((json) => {
+            this.state.messages.push(json)
+            this.setState({})
+        })
+        this.setState({
+            input: "",
+        })
+    }
+
+    onInput = e => {
+        this.setState({
+            input: e.target.value,
+        })
+    }
+
     render() {
         return <div>
             <div>
@@ -46,6 +68,10 @@ export default class ChatPage extends Component {
                 <ul>
                     {this.state.messages.map((msg) => <li key={msg}>{msg.name + ": " + msg.text}</li>)}
                 </ul>
+                <form onSubmit={this.onSend}>
+                    <input type="text" value={this.state.input} onInput={this.onInput}/>
+                    <button type="submit">Send</button>
+                </form>
             </div>
         </div>
     }
