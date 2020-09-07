@@ -16,6 +16,9 @@ export default class ChatPage extends Component {
                 this.setState({
                     users: json["users"].sort(),
                 })
+            } else if (json["typ"] === "msg") {
+                this.state.messages.push(json)
+                this.setState({})
             }
         }
 
@@ -36,6 +39,12 @@ export default class ChatPage extends Component {
                 <h2>Online Users</h2>
                 <ul>
                     {this.state.users.map((name) => <li key={name}>{name}</li>)}
+                </ul>
+            </div>
+            <div>
+                <h2>Chat</h2>
+                <ul>
+                    {this.state.messages.map((msg) => <li key={msg}>{msg.name + ": " + msg.text}</li>)}
                 </ul>
             </div>
         </div>
