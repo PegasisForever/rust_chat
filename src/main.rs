@@ -5,14 +5,13 @@ use std::{env, io::Error};
 use log::info;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
-use tokio::sync::mpsc::{Sender, Receiver};
+use tokio::sync::mpsc::{Sender};
 use tokio_tungstenite::tungstenite::Message;
 use futures_util::{StreamExt, SinkExt};
 use futures_util::core_reexport::result::Result::Ok;
 use serde_json::{Value};
-use std::collections::{HashSet, HashMap};
-use std::iter::FromIterator;
-use crate::structs::{UserChange, ChangeType, OnlineUsersBoardCast, NameReq, MsgReq, MsgBoardCast, CurrentStateRes};
+use std::collections::HashMap;
+use crate::structs::{OnlineUsersBoardCast, NameReq, MsgReq, MsgBoardCast};
 use tokio::signal;
 use std::sync::{Mutex, Arc};
 use serde_json::json;
@@ -74,7 +73,7 @@ async fn process_connection(stream: TcpStream, users_map: UsersMap) {
     info!("New WebSocket connection");
     let (mut write, mut read) =
         tokio_tungstenite::accept_async(stream).await.unwrap().split();
-    let (mut ws_tx, mut ws_rx) = mpsc::channel::<String>(32);
+    let (ws_tx, mut ws_rx) = mpsc::channel::<String>(32);
 
     let receive_task = async move {
         let mut name: Option<String> = None;
@@ -88,12 +87,6 @@ async fn process_connection(stream: TcpStream, users_map: UsersMap) {
                                 info!("name set to {:?}", name.as_ref().unwrap());
 
                                 user_joined(&name, &users_map, &ws_tx);
-
-                                // let user_change = UserChange {
-                                //     change_type: ChangeType::Join,
-                                //     name: String::from(name.as_ref().unwrap()),
-                                // };
-                                // user_tx.send(user_change).await.unwrap();
                             }
                         } else if json["typ"] == "msg" {
                             if let Ok(req) = serde_json::from_value::<MsgReq>(json.clone()) {
@@ -103,8 +96,12 @@ async fn process_connection(stream: TcpStream, users_map: UsersMap) {
                                     name: String::from(name.as_ref().unwrap()),
                                     text: req.text,
                                 };
-                                // ws_tx.send(serde_json::to_string(&bc).unwrap()).unwrap();
-                                // messages.lock().unwrap().push(bc);
+
+                                let text = serde_json::to_string(&bc).unwrap();
+                                let mut users_map = users_map.lock().unwrap();
+                                for (_, tx) in users_map.iter_mut() {
+                                    tx.try_send(text.clone()).unwrap();
+                                }
                             }
                         } else if json["type"] == "chess" {
                             unimplemented!();
@@ -117,11 +114,6 @@ async fn process_connection(stream: TcpStream, users_map: UsersMap) {
         }
 
         user_left(&name, &users_map);
-        // let user_change = UserChange {
-        //     change_type: ChangeType::Leave,
-        //     name: String::from(name.as_ref().unwrap()),
-        // };
-        // user_tx.send(user_change).await.unwrap();
     };
 
     let send_task = async move {

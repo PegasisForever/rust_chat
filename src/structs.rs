@@ -37,16 +37,3 @@ pub struct OnlineUsersBoardCast {
     pub typ: String,
     pub users: Vec<String>,
 }
-
-#[derive(Debug, Clone)]
-pub enum ChangeType {
-    Join,
-    Leave,
-}
-
-// process_connection -> user_mpsc -> user_manager
-#[derive(Debug, Clone)]
-pub struct UserChange {
-    pub change_type: ChangeType,
-    pub name: String,
-}
