@@ -11,13 +11,14 @@ use futures_util::{StreamExt, SinkExt};
 use futures_util::core_reexport::result::Result::Ok;
 use serde_json::{Value};
 use std::collections::HashMap;
-use crate::structs::{OnlineUsersBoardCast, NameReq, MsgReq, MsgBoardCast};
+use crate::structs::{OnlineUsersBoardCast, NameReq, MsgReq, MsgBoardCast, CurrentStateRes};
 use tokio::signal;
 use std::sync::{Mutex, Arc};
 use serde_json::json;
 
 
 type UsersMap = Arc<Mutex<HashMap<String, Sender<String>>>>;
+type MessageList = Arc<Mutex<Vec<MsgBoardCast>>>;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -28,11 +29,12 @@ async fn main() -> Result<(), Error> {
     info!("Listening");
 
     let users_map: UsersMap = Arc::new(Mutex::new(HashMap::new()));
+    let message_list: MessageList = Arc::new(Mutex::new(Vec::new()));
 
     tokio::select! {
         _ = async move {
             while let Ok((stream, _)) = listener.accept().await {
-                tokio::spawn(process_connection(stream, users_map.clone()));
+                tokio::spawn(process_connection(stream, users_map.clone(),message_list.clone()));
             }
         } => (),
          _ = signal::ctrl_c() => (),
@@ -69,11 +71,11 @@ fn send_user_list_bc(users_map: &UsersMap) {
     }
 }
 
-async fn process_connection(stream: TcpStream, users_map: UsersMap) {
+async fn process_connection(stream: TcpStream, users_map: UsersMap, message_list: MessageList) {
     info!("New WebSocket connection");
     let (mut write, mut read) =
         tokio_tungstenite::accept_async(stream).await.unwrap().split();
-    let (ws_tx, mut ws_rx) = mpsc::channel::<String>(32);
+    let (mut ws_tx, mut ws_rx) = mpsc::channel::<String>(32);
 
     let receive_task = async move {
         let mut name: Option<String> = None;
@@ -84,7 +86,12 @@ async fn process_connection(stream: TcpStream, users_map: UsersMap) {
                         if json["typ"] == "name" && name == None {
                             if let Ok(req) = serde_json::from_value::<NameReq>(json.clone()) {
                                 name = Some(req.name);
-                                info!("name set to {:?}", name.as_ref().unwrap());
+
+                                let res = json!({
+                                    "typ": "state",
+                                    "messages": &*message_list.lock().unwrap()
+                                });
+                                ws_tx.send(res.to_string()).await.unwrap();
 
                                 user_joined(&name, &users_map, &ws_tx);
                             }
@@ -98,6 +105,8 @@ async fn process_connection(stream: TcpStream, users_map: UsersMap) {
                                 };
 
                                 let text = serde_json::to_string(&bc).unwrap();
+                                message_list.lock().unwrap().push(bc);
+
                                 let mut users_map = users_map.lock().unwrap();
                                 for (_, tx) in users_map.iter_mut() {
                                     tx.try_send(text.clone()).unwrap();
