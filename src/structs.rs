@@ -18,12 +18,6 @@ pub struct MsgReq {
     pub id: Uuid,
 }
 
-// process_connection -> ws
-#[derive(Serialize, Deserialize, Debug)]
-pub struct CurrentStateRes {
-    pub messages: Vec<MsgBoardCast>,
-}
-
 // process_connection -> ws_board_cast -> process_connection
 #[derive(Serialize, Deserialize, Debug)]
 pub struct MsgBoardCast {

@@ -12,7 +12,7 @@ use futures_util::{StreamExt, SinkExt};
 use futures_util::core_reexport::result::Result::Ok;
 use serde_json::{Value};
 use std::collections::HashMap;
-use crate::structs::{OnlineUsersBoardCast, NameReq, MsgReq, MsgBoardCast, CurrentStateRes};
+use crate::structs::{OnlineUsersBoardCast, NameReq, MsgReq, MsgBoardCast};
 use tokio::signal;
 use std::sync::{Mutex, Arc};
 use serde_json::json;
@@ -80,7 +80,7 @@ fn user_left(name: &Option<String>, users_map: &UsersMap) {
 }
 
 fn get_user_list_json(users_map: &UsersMap) -> Vec<String> {
-    let mut users_map = users_map.lock().unwrap();
+    let users_map = users_map.lock().unwrap();
     users_map.iter()
         .map(|(name, _)| {
             String::from(name)
@@ -105,9 +105,14 @@ fn send_user_list_bc(users_map: &UsersMap, excluded_user: &str) {
 }
 
 async fn process_connection(stream: TcpStream, users_map: UsersMap, message_list: MessageList) {
+    let ws = tokio_tungstenite::accept_async(stream).await;
+    if ws.is_err() {
+        return;
+    }
+
     info!("New WebSocket connection");
     let (mut write, mut read) =
-        tokio_tungstenite::accept_async(stream).await.unwrap().split();
+        ws.unwrap().split();
     let (mut ws_tx, mut ws_rx) = mpsc::channel::<String>(32);
 
     let receive_task = async move {
