@@ -68,29 +68,39 @@ async fn main() -> Result<(), Error> {
 }
 
 fn user_joined(name: &Option<String>, users_map: &UsersMap, ws_tx: &Sender<String>) {
-    users_map.lock().unwrap().insert(String::from(name.as_ref().unwrap()), ws_tx.clone());
-    send_user_list_bc(users_map);
+    let name_ref = name.as_ref().unwrap();
+    users_map.lock().unwrap().insert(String::from(name_ref), ws_tx.clone());
+    send_user_list_bc(users_map, name_ref);
 }
 
 fn user_left(name: &Option<String>, users_map: &UsersMap) {
-    users_map.lock().unwrap().remove(name.as_ref().unwrap());
-    send_user_list_bc(users_map);
+    let name_ref = name.as_ref().unwrap();
+    users_map.lock().unwrap().remove(name_ref);
+    send_user_list_bc(users_map, name_ref);
 }
 
-fn send_user_list_bc(users_map: &UsersMap) {
+fn get_user_list_json(users_map: &UsersMap) -> Vec<String> {
     let mut users_map = users_map.lock().unwrap();
-    let user_list = users_map.iter()
+    users_map.iter()
         .map(|(name, _)| {
             String::from(name)
         })
-        .collect::<Vec<String>>();
+        .collect::<Vec<String>>()
+}
+
+fn send_user_list_bc(users_map: &UsersMap, excluded_user: &str) {
+    let user_list = get_user_list_json(users_map);
     let bc = OnlineUsersBoardCast {
         typ: "users".to_string(),
         users: user_list,
     };
+
     let text = serde_json::to_string(&bc).unwrap();
-    for (_, tx) in users_map.iter_mut() {
-        tx.try_send(text.clone()).unwrap();
+    let mut users_map = users_map.lock().unwrap();
+    for (name, tx) in users_map.iter_mut() {
+        if name != excluded_user {
+            tx.try_send(text.clone()).unwrap();
+        }
     }
 }
 
@@ -110,13 +120,15 @@ async fn process_connection(stream: TcpStream, users_map: UsersMap, message_list
                             if let Ok(req) = serde_json::from_value::<NameReq>(json.clone()) {
                                 name = Some(req.name);
 
+                                user_joined(&name, &users_map, &ws_tx);
+
                                 let res = json!({
                                     "typ": "state",
-                                    "messages": &*message_list.lock().unwrap()
+                                    "messages": &*message_list.lock().unwrap(),
+                                    "users": get_user_list_json(&users_map),
+                                    "id": req.id,
                                 });
                                 ws_tx.send(res.to_string()).await.unwrap();
-
-                                user_joined(&name, &users_map, &ws_tx);
                             }
                         } else if json["typ"] == "msg" {
                             if let Ok(req) = serde_json::from_value::<MsgReq>(json.clone()) {
@@ -127,12 +139,21 @@ async fn process_connection(stream: TcpStream, users_map: UsersMap, message_list
                                     text: req.text,
                                 };
 
-                                let text = serde_json::to_string(&bc).unwrap();
+                                let mut value = serde_json::to_value(&bc).unwrap();
+                                let others_text = value.to_string();
+                                value["id"] = serde_json::to_value(&req.id).unwrap();
+                                let res_test = value.to_string();
+
                                 message_list.lock().unwrap().push(bc);
 
                                 let mut users_map = users_map.lock().unwrap();
-                                for (_, tx) in users_map.iter_mut() {
-                                    tx.try_send(text.clone()).unwrap();
+                                let my_name = name.as_ref().unwrap();
+                                for (name, tx) in users_map.iter_mut() {
+                                    if name != my_name {
+                                        tx.try_send(others_text.clone()).unwrap();
+                                    } else {
+                                        tx.try_send(res_test.clone()).unwrap();
+                                    }
                                 }
                             }
                         } else if json["type"] == "chess" {

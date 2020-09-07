@@ -1,11 +1,12 @@
 use serde::{Serialize, Deserialize};
-
+use uuid::Uuid;
 
 // ws -> process_connection
 #[derive(Serialize, Deserialize, Debug)]
 pub struct NameReq {
     pub typ: String,
     pub name: String,
+    pub id: Uuid,
 }
 
 // ws -> process_connection
@@ -14,6 +15,7 @@ pub struct MsgReq {
     pub typ: String,
     pub time: i32,
     pub text: String,
+    pub id: Uuid,
 }
 
 // process_connection -> ws
