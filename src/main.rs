@@ -1,3 +1,5 @@
+mod structs;
+
 use std::{env, io::Error};
 
 use log::info;
@@ -9,48 +11,9 @@ use tokio_tungstenite::tungstenite::Message;
 use futures_util::{StreamExt, SinkExt};
 use futures_util::core_reexport::result::Result::Ok;
 use serde_json::{Value};
-use serde::{Serialize, Deserialize};
 use std::collections::HashSet;
 use std::iter::FromIterator;
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct NameReq {
-    typ: String,
-    name: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct MsgReq {
-    typ: String,
-    time: i32,
-    text: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct MsgBoardCast {
-    typ: String,
-    time: i32,
-    name: String,
-    text: String,
-}
-
-#[derive(Debug, Clone)]
-pub enum ChangeType {
-    Join,
-    Leave,
-}
-
-#[derive(Debug, Clone)]
-pub struct UserChange {
-    change_type: ChangeType,
-    name: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct OnlineUserList {
-    typ: String,
-    users: Vec<String>,
-}
+use crate::structs::{UserChange, ChangeType, OnlineUsersBoardCast, NameReq, MsgReq, MsgBoardCast};
 
 
 #[tokio::main]
@@ -69,7 +32,7 @@ async fn main() -> Result<(), Error> {
     while let Ok((stream, _)) = listener.accept().await {
         let ws_tx = ws_tx.clone();
         let ws_rx = ws_tx.subscribe();
-        tokio::spawn(accept_connection(stream, ws_tx, ws_rx, user_tx.clone()));
+        tokio::spawn(process_connection(stream, ws_tx, ws_rx, user_tx.clone()));
     }
 
     Ok(())
@@ -79,15 +42,11 @@ async fn user_manager(ws_tx: Sender<String>, mut user_rx: mpsc::Receiver<UserCha
     let mut users = HashSet::new();
     while let Some(change) = user_rx.recv().await {
         match change.change_type {
-            ChangeType::Join => {
-                users.insert(change.name);
-            }
-            ChangeType::Leave => {
-                users.remove(&change.name);
-            }
-        }
+            ChangeType::Join => users.insert(change.name),
+            ChangeType::Leave => users.remove(&change.name),
+        };
 
-        let bc = OnlineUserList {
+        let bc = OnlineUsersBoardCast {
             typ: "users".to_string(),
             users: Vec::from_iter(users.clone().into_iter()),
         };
@@ -95,7 +54,7 @@ async fn user_manager(ws_tx: Sender<String>, mut user_rx: mpsc::Receiver<UserCha
     }
 }
 
-async fn accept_connection(stream: TcpStream, ws_tx: Sender<String>, mut ws_rx: Receiver<String>, mut user_tx: mpsc::Sender<UserChange>) {
+async fn process_connection(stream: TcpStream, ws_tx: Sender<String>, mut ws_rx: Receiver<String>, mut user_tx: mpsc::Sender<UserChange>) {
     info!("New WebSocket connection");
     let (mut write, mut read) =
         tokio_tungstenite::accept_async(stream).await.unwrap().split();
