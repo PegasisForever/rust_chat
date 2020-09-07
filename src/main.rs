@@ -14,7 +14,7 @@ use serde_json::{Value};
 use std::collections::HashSet;
 use std::iter::FromIterator;
 use crate::structs::{UserChange, ChangeType, OnlineUsersBoardCast, NameReq, MsgReq, MsgBoardCast};
-
+use tokio::signal;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -27,14 +27,19 @@ async fn main() -> Result<(), Error> {
     let (ws_tx, _) = broadcast::channel(32);
     let (user_tx, user_rx) = mpsc::channel(32);
 
-    tokio::spawn(user_manager(ws_tx.clone(), user_rx));
-
-    while let Ok((stream, _)) = listener.accept().await {
-        let ws_tx = ws_tx.clone();
-        let ws_rx = ws_tx.subscribe();
-        tokio::spawn(process_connection(stream, ws_tx, ws_rx, user_tx.clone()));
+    tokio::select! {
+        _ = user_manager(ws_tx.clone(), user_rx) => (),
+        _ = async move {
+            while let Ok((stream, _)) = listener.accept().await {
+                let ws_tx = ws_tx.clone();
+                let ws_rx = ws_tx.subscribe();
+                tokio::spawn(process_connection(stream, ws_tx, ws_rx, user_tx.clone()));
+            }
+        } => (),
+         _ = signal::ctrl_c() => (),
     }
 
+    info!("stopped");
     Ok(())
 }
 
