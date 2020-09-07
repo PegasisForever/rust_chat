@@ -13,8 +13,13 @@ use futures_util::core_reexport::result::Result::Ok;
 use serde_json::{Value};
 use std::collections::HashSet;
 use std::iter::FromIterator;
-use crate::structs::{UserChange, ChangeType, OnlineUsersBoardCast, NameReq, MsgReq, MsgBoardCast};
+use crate::structs::{UserChange, ChangeType, OnlineUsersBoardCast, NameReq, MsgReq, MsgBoardCast, CurrentStateRes};
 use tokio::signal;
+use std::sync::{Mutex, Arc};
+use serde_json::json;
+use futures_util::core_reexport::sync::atomic::Ordering::AcqRel;
+
+type Messages = Arc<Mutex<Vec<MsgBoardCast>>>;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -27,13 +32,16 @@ async fn main() -> Result<(), Error> {
     let (ws_tx, _) = broadcast::channel(32);
     let (user_tx, user_rx) = mpsc::channel(32);
 
+    let messages: Messages = Arc::new(Mutex::new(Vec::new()));
+    let messages_global = messages.clone();
+
     tokio::select! {
         _ = user_manager(ws_tx.clone(), user_rx) => (),
         _ = async move {
             while let Ok((stream, _)) = listener.accept().await {
                 let ws_tx = ws_tx.clone();
                 let ws_rx = ws_tx.subscribe();
-                tokio::spawn(process_connection(stream, ws_tx, ws_rx, user_tx.clone()));
+                tokio::spawn(process_connection(stream, ws_tx, ws_rx, user_tx.clone(), messages.clone()));
             }
         } => (),
          _ = signal::ctrl_c() => (),
@@ -59,7 +67,11 @@ async fn user_manager(ws_tx: Sender<String>, mut user_rx: mpsc::Receiver<UserCha
     }
 }
 
-async fn process_connection(stream: TcpStream, ws_tx: Sender<String>, mut ws_rx: Receiver<String>, mut user_tx: mpsc::Sender<UserChange>) {
+async fn process_connection(stream: TcpStream,
+                            ws_tx: Sender<String>,
+                            mut ws_rx: Receiver<String>,
+                            mut user_tx: mpsc::Sender<UserChange>,
+                            messages: Messages) {
     info!("New WebSocket connection");
     let (mut write, mut read) =
         tokio_tungstenite::accept_async(stream).await.unwrap().split();
@@ -74,11 +86,16 @@ async fn process_connection(stream: TcpStream, ws_tx: Sender<String>, mut ws_rx:
                             if let Ok(req) = serde_json::from_value::<NameReq>(json.clone()) {
                                 name = Some(req.name);
                                 info!("name set to {:?}", name.as_ref().unwrap());
+
                                 let user_change = UserChange {
                                     change_type: ChangeType::Join,
                                     name: String::from(name.as_ref().unwrap()),
                                 };
                                 user_tx.send(user_change).await.unwrap();
+
+                                let message_list = messages.lock().unwrap();
+                                let res = json!(&*message_list);
+                                write.lock().unwrap().send(Message::Text(res.to_string())).await.unwrap();
                             }
                         } else if json["typ"] == "msg" {
                             if let Ok(req) = serde_json::from_value::<MsgReq>(json.clone()) {
@@ -89,6 +106,7 @@ async fn process_connection(stream: TcpStream, ws_tx: Sender<String>, mut ws_rx:
                                     text: req.text,
                                 };
                                 ws_tx.send(serde_json::to_string(&bc).unwrap()).unwrap();
+                                messages.lock().unwrap().push(bc);
                             }
                         } else if json["type"] == "chess" {
                             unimplemented!();
