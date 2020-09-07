@@ -1,4 +1,5 @@
 mod structs;
+mod tools;
 
 use std::{env, io::Error};
 
@@ -15,10 +16,14 @@ use crate::structs::{OnlineUsersBoardCast, NameReq, MsgReq, MsgBoardCast, Curren
 use tokio::signal;
 use std::sync::{Mutex, Arc};
 use serde_json::json;
+use crate::tools::ensure_file_exists;
+use tokio::fs;
 
 
 type UsersMap = Arc<Mutex<HashMap<String, Sender<String>>>>;
 type MessageList = Arc<Mutex<Vec<MsgBoardCast>>>;
+
+const MESSAGE_PATH: &str = "chat_data/messages.json";
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -29,16 +34,34 @@ async fn main() -> Result<(), Error> {
     info!("Listening");
 
     let users_map: UsersMap = Arc::new(Mutex::new(HashMap::new()));
-    let message_list: MessageList = Arc::new(Mutex::new(Vec::new()));
+
+    let message_list: MessageList = {
+        ensure_file_exists(MESSAGE_PATH, "[]").await.unwrap();
+        let text = fs::read_to_string(MESSAGE_PATH).await.unwrap();
+        let json: Value = serde_json::from_str(&text).unwrap();
+        let list = json.as_array().unwrap().iter()
+            .map(|msg_bc_json| {
+                serde_json::from_value::<MsgBoardCast>(msg_bc_json.clone()).unwrap()
+            })
+            .collect();
+        Arc::new(Mutex::new(list))
+    };
+    let message_list2 = message_list.clone();
 
     tokio::select! {
         _ = async move {
             while let Ok((stream, _)) = listener.accept().await {
-                tokio::spawn(process_connection(stream, users_map.clone(),message_list.clone()));
+                tokio::spawn(process_connection(stream, users_map.clone(), message_list.clone()));
             }
         } => (),
          _ = signal::ctrl_c() => (),
     }
+
+    {
+        let text = json!(&*message_list2.lock().unwrap()).to_string();
+        fs::write(MESSAGE_PATH, text).await.unwrap();
+    }
+
 
     info!("stopped");
     Ok(())
