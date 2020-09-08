@@ -1,7 +1,8 @@
 import {Component, createRef} from "preact"
 import {getName} from "./tools"
 import ServerCon from "./ServerCon"
-import ChessBoard from "./chess"
+import ChessBoard, {CHESS_SIZE} from "./chess"
+import ChessSelect from "./chessSelect"
 
 export default class ChatPage extends Component {
     state = {
@@ -9,6 +10,7 @@ export default class ChatPage extends Component {
         messages: [],
         chess: [],
         input: "",
+        isBlack: true,
     }
     chatListRef = createRef()
 
@@ -23,6 +25,10 @@ export default class ChatPage extends Component {
             } else if (json["typ"] === "msg") {
                 this.state.messages.push(json)
                 this.setState({}, this.isAtBottom() ? this.scrollToBottom : undefined)
+            } else if (json["typ"] === "chess") {
+                this.setState({
+                    chess: json["chess"],
+                })
             }
         }
 
@@ -71,6 +77,19 @@ export default class ChatPage extends Component {
         })
     }
 
+    onChessClick = (x, y) => {
+        this.state.chess[y * CHESS_SIZE + x] = this.state.isBlack
+        this.connection.request({
+            "typ": "chess",
+            "time": Date.now(),
+            "chess": this.state.chess,
+        }).then((json) => {
+            this.setState({
+                chess: json["chess"],
+            })
+        })
+    }
+
     render() {
         return <div class="chat-page-layout">
             <div>
@@ -89,7 +108,9 @@ export default class ChatPage extends Component {
                 </form>
             </div>
             <div class="chess-board-column">
-                <ChessBoard data={this.state.chess}/>
+                <ChessBoard data={this.state.chess} onClick={this.onChessClick}/>
+                <ChessSelect isBlack={this.state.isBlack}
+                             onChange={(isBlack) => this.setState({isBlack: isBlack})}/>
             </div>
         </div>
     }
