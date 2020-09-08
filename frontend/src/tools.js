@@ -5,3 +5,7 @@ export function setName(name) {
 export function getName() {
     return localStorage.getItem("name")
 }
+
+export function forgetName(){
+    return localStorage.removeItem("name")
+}

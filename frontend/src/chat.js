@@ -1,9 +1,11 @@
 import {Component, createRef} from "preact"
-import {getName} from "./tools"
+import {forgetName, getName} from "./tools"
 import ServerCon from "./ServerCon"
 import ChessBoard, {CHESS_SIZE} from "./chess"
 import ChessSelect from "./chessSelect"
 import ChessClear from "./chessClear"
+
+const WS_URL = "ws://localhost:8080"
 
 export default class ChatPage extends Component {
     state = {
@@ -17,7 +19,7 @@ export default class ChatPage extends Component {
 
     constructor(props) {
         super(props)
-        this.connection = new ServerCon("ws://localhost:8080")
+        this.connection = new ServerCon(WS_URL)
         this.connection.onmessage = (json) => {
             if (json["typ"] === "users") {
                 this.setState({
@@ -101,9 +103,17 @@ export default class ChatPage extends Component {
         this.updateChess()
     }
 
+    onLogout = () => {
+        forgetName()
+        this.props.onUpdateLogin()
+    }
+
     render() {
         return <div class="chat-page-layout">
             <div>
+                <button onclick={this.onLogout}>
+                    Logout
+                </button>
                 <h2>Online Users</h2>
                 <div>
                     {this.state.users.map((name) => <p key={name}>{name}</p>)}
