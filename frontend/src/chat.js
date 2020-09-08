@@ -6,7 +6,7 @@ import ChessSelect from "./chessSelect"
 import ChessClear from "./chessClear"
 import ChatList from "./chatList"
 
-const WS_URL = "ws://localhost:8080"
+const WS_URL = "ws://192.168.0.81:8080"
 
 export default class ChatPage extends Component {
     state = {
@@ -27,6 +27,7 @@ export default class ChatPage extends Component {
                     users: json["users"],
                 })
             } else if (json["typ"] === "msg") {
+                window.focus()
                 this.state.messages.push(json)
                 this.setState({}, this.isAtBottom() ? this.scrollToBottom : undefined)
             } else if (json["typ"] === "chess") {
@@ -51,12 +52,12 @@ export default class ChatPage extends Component {
     }
 
     isAtBottom = () => {
-        let list = this.chatListRef.current
-        return list.scrollTop === list.scrollHeight - list.clientHeight
+        let list = this.chatListRef.current.base
+        return Math.abs(list.scrollHeight - list.clientHeight - list.scrollTop) < 5
     }
 
     scrollToBottom = () => {
-        let list = this.chatListRef.current
+        let list = this.chatListRef.current.base
         list.scrollTop = list.scrollHeight - list.clientHeight
     }
 
@@ -111,7 +112,7 @@ export default class ChatPage extends Component {
         this.props.onUpdateLogin()
     }
 
-    componentWillUnmount(){
+    componentWillUnmount() {
         this.connection.disconnect()
     }
 
