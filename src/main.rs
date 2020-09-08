@@ -33,7 +33,7 @@ async fn main() -> Result<(), Error> {
     env::set_var("RUST_LOG", "debug");
     env_logger::init();
 
-    let mut listener = TcpListener::bind("127.0.0.1:8080").await?;
+    let mut listener = TcpListener::bind("0.0.0.0:8080").await?;
     info!("Listening");
 
     let users_map: UsersMap = Arc::new(Mutex::new(HashMap::new()));
