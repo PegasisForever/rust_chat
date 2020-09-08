@@ -13,7 +13,7 @@ pub struct NameReq {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct MsgReq {
     pub typ: String,
-    pub time: i32,
+    pub time: i64,
     pub text: String,
     pub id: Uuid,
 }
@@ -22,7 +22,7 @@ pub struct MsgReq {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct MsgBoardCast {
     pub typ: String,
-    pub time: i32,
+    pub time: i64,
     pub name: String,
     pub text: String,
 }

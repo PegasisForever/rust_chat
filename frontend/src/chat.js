@@ -51,7 +51,7 @@ export default class ChatPage extends Component {
         e.preventDefault()
         this.connection.request({
             "typ": "msg",
-            "time": Math.floor(Date.now() / 1000), //todo use milliseconds
+            "time": Date.now(),
             "text": this.state.input,
         }).then((json) => {
             this.state.messages.push(json)
