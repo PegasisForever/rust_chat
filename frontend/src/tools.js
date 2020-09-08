@@ -27,3 +27,11 @@ export function rndFactory(str) {
         return ((t ^ t >>> 14) >>> 0) / 4294967296
     }
 }
+
+export function getWsUrl() {
+    if (!process.env.NODE_ENV || process.env.NODE_ENV === "development") {
+        return "ws://localhost:8080"
+    } else {
+        return "/ws"
+    }
+}

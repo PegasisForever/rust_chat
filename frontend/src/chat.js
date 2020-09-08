@@ -1,12 +1,10 @@
 import {Component, createRef} from "preact"
-import {forgetName, getName} from "./tools"
+import {forgetName, getName, getWsUrl} from "./tools"
 import ServerCon from "./ServerCon"
 import ChessBoard, {CHESS_SIZE} from "./chess"
 import ChessSelect from "./chessSelect"
 import ChessClear from "./chessClear"
 import ChatList from "./chatList"
-
-const WS_URL = "ws://localhost:8080"
 
 export default class ChatPage extends Component {
     state = {
@@ -21,7 +19,7 @@ export default class ChatPage extends Component {
 
     constructor(props) {
         super(props)
-        this.connection = new ServerCon(WS_URL)
+        this.connection = new ServerCon(getWsUrl())
         this.connection.onmessage = (json) => {
             if (json["typ"] === "users") {
                 this.setState({
