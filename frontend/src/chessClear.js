@@ -1,5 +1,5 @@
 export default function ChessClear(props) {
     return <div class="chess-clear-bar">
-        <span onclick={props.onClick}>Clear</span>
+        <button onclick={props.onClick}>Clear</button>
     </div>
 }

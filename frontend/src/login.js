@@ -18,10 +18,10 @@ export default class LoginPage extends Component {
 
     render(_, {name}) {
         return <div class={"center-child"}>
-            <form onSubmit={this.onSubmit}>
-                <label for="name-input">Name:</label>
-                <input required="required" type="text" id="name-input" value={name} onInput={this.onInput}/>
-                <button type="submit">Ok</button>
+            <form class={"login-form"} onSubmit={this.onSubmit}>
+                <h2>Name:</h2>
+                <input required type="text" value={name} onInput={this.onInput}/>
+                <button type="submit">Login</button>
             </form>
         </div>
     }

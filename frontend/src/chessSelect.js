@@ -1,8 +1,8 @@
 function SelectItem(props) {
-    return <div class={props.isSelected ? "selected" : ""} onclick={props.onClick}>
+    return <button class={props.isSelected ? "selected" : ""} onclick={props.onClick}>
         <img src={props.src} alt=""/>
         <span>{props.text}</span>
-    </div>
+    </button>
 }
 
 export default function ChessSelect(props) {
