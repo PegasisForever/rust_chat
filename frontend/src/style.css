@@ -71,9 +71,18 @@ body {
 
 .chess-board > .chess {
     position: absolute;
+    background-position: center;
     border: 2px solid transparent;
 }
 
 .chess-board > .chess:hover {
     border: 2px solid black;
+}
+
+.chess-board > .black {
+    background-image: url("black.svg");
+}
+
+.chess-board > .white {
+    background-image: url("white.svg");
 }

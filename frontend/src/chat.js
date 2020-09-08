@@ -7,6 +7,7 @@ export default class ChatPage extends Component {
     state = {
         users: [],
         messages: [],
+        chess: [],
         input: "",
     }
     chatListRef = createRef()
@@ -32,6 +33,7 @@ export default class ChatPage extends Component {
             this.setState({
                     users: json["users"].sort(),
                     messages: json["messages"],
+                    chess: json["chess"],
                 },
                 this.scrollToBottom,
             )
@@ -87,7 +89,7 @@ export default class ChatPage extends Component {
                 </form>
             </div>
             <div class="chess-board-column">
-                <ChessBoard/>
+                <ChessBoard data={this.state.chess}/>
             </div>
         </div>
     }

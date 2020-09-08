@@ -18,7 +18,14 @@ function HorizontalLine(props) {
 }
 
 function Chess(props) {
-    return <div class="chess" style={{
+    let chessClass = ""
+    if (props.isBlack === true) {
+        chessClass = "black"
+    } else if (props.isBlack === false) {
+        chessClass = "white"
+    }
+
+    return <div class={"chess " + chessClass} style={{
         width: props.spacing,
         height: props.spacing,
         top: (props.spacing / 2 + props.spacing * props.y - 1) + "px",
@@ -33,14 +40,15 @@ export default function ChessBoard(props) {
         lines.push(<VerticalLine x={i} spacing={spacing}/>)
         lines.push(<HorizontalLine y={i} spacing={spacing}/>)
     }
+
+    let chessData = props.data
     let chesses = []
     for (let y = 0; y < SIZE; y++) {
         for (let x = 0; x < SIZE; x++) {
-            chesses.push(<Chess x={x} y={y} spacing={spacing}/>)
+            chesses.push(<Chess isBlack={chessData[y * SIZE + x]} x={x} y={y} spacing={spacing}/>)
         }
     }
 
-    console.log(lines)
     return <div class="chess-board" style={{width: SIZE_PX, height: SIZE_PX}}>
         {lines}
         {chesses}
