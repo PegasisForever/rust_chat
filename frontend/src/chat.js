@@ -56,22 +56,24 @@ export default class ChatPage extends Component {
     }
 
     render() {
-        return <div>
+        return <div class="chat-page-layout">
             <div>
                 <h2>Online Users</h2>
-                <ul>
-                    {this.state.users.map((name) => <li key={name}>{name}</li>)}
-                </ul>
+                <div>
+                    {this.state.users.map((name) => <p key={name}>{name}</p>)}
+                </div>
             </div>
-            <div>
-                <h2>Chat</h2>
-                <ul>
-                    {this.state.messages.map((msg) => <li key={msg}>{msg.name + ": " + msg.text}</li>)}
-                </ul>
-                <form onSubmit={this.onSend}>
+            <div class="chat-column" style={{flexGrow: 1}}>
+                <div class="chat-list">
+                    {this.state.messages.map((msg) => <p key={msg}>{msg.name + ": " + msg.text}</p>)}
+                </div>
+                <form class="input-bar" onSubmit={this.onSend}>
                     <input type="text" value={this.state.input} onInput={this.onInput}/>
                     <button type="submit">Send</button>
                 </form>
+            </div>
+            <div>
+                awa
             </div>
         </div>
     }
