@@ -40,4 +40,8 @@ export default class ServerCon {
             }
         })
     }
+
+    disconnect() {
+        this.ws.close()
+    }
 }

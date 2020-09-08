@@ -61,17 +61,19 @@ export default class ChatPage extends Component {
 
     onSend = e => {
         e.preventDefault()
-        this.connection.request({
-            "typ": "msg",
-            "time": Date.now(),
-            "text": this.state.input,
-        }).then((json) => {
-            this.state.messages.push(json)
-            this.setState({}, this.isAtBottom() ? this.scrollToBottom : undefined)
-        })
-        this.setState({
-            input: "",
-        })
+        if (this.state.input !== "") {
+            this.connection.request({
+                "typ": "msg",
+                "time": Date.now(),
+                "text": this.state.input,
+            }).then((json) => {
+                this.state.messages.push(json)
+                this.setState({}, this.isAtBottom() ? this.scrollToBottom : undefined)
+            })
+            this.setState({
+                input: "",
+            })
+        }
     }
 
     onInput = e => {
@@ -108,9 +110,13 @@ export default class ChatPage extends Component {
         this.props.onUpdateLogin()
     }
 
+    componentWillUnmount(){
+        this.connection.disconnect()
+    }
+
     render() {
         return <div class="chat-page-layout">
-            <div>
+            <div class={"online-user-column"}>
                 <button onclick={this.onLogout}>
                     Logout
                 </button>
