@@ -4,6 +4,7 @@ import ServerCon from "./ServerCon"
 import ChessBoard, {CHESS_SIZE} from "./chess"
 import ChessSelect from "./chessSelect"
 import ChessClear from "./chessClear"
+import ChatList from "./chatList"
 
 const WS_URL = "ws://localhost:8080"
 
@@ -126,9 +127,7 @@ export default class ChatPage extends Component {
                 </div>
             </div>
             <div class="chat-column" style={{flexGrow: 1}}>
-                <div ref={this.chatListRef} class="chat-list">
-                    {this.state.messages.map((msg) => <p key={msg}>{msg.name + ": " + msg.text}</p>)}
-                </div>
+                <ChatList ref={this.chatListRef} messages={this.state.messages}/>
                 <form class="input-bar" onSubmit={this.onSend}>
                     <input type="text" value={this.state.input} onInput={this.onInput}/>
                     <button type="submit">Send</button>

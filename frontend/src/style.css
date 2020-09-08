@@ -15,7 +15,7 @@ button {
     background-color: rgba(0, 0, 0, .06);
 }
 
-button:active{
+button:active {
     color: black;
     transform: scale(.95);
 }
@@ -150,4 +150,8 @@ input {
     padding-top: 16px;
     padding-left: 16px;
     padding-right: 32px;
+}
+
+.time-span {
+    color: rgb(150, 150, 150);
 }

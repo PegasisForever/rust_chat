@@ -9,6 +9,9 @@ export default class ServerCon {
     constructor(addr) {
         this.ws = new WebSocket(addr)
 
+        this.ws.onerror = (e) => {
+            alert("Websocket error: " + e)
+        }
         this.ws.onopen = () => {
             this.queue.forEach((json) => {
                 this.ws.send(JSON.stringify(json))
