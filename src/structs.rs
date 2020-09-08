@@ -1,7 +1,6 @@
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
-// ws -> process_connection
 #[derive(Serialize, Deserialize, Debug)]
 pub struct NameReq {
     pub typ: String,
@@ -9,7 +8,6 @@ pub struct NameReq {
     pub id: Uuid,
 }
 
-// ws -> process_connection
 #[derive(Serialize, Deserialize, Debug)]
 pub struct MsgReq {
     pub typ: String,
@@ -18,7 +16,6 @@ pub struct MsgReq {
     pub id: Uuid,
 }
 
-// ws -> process_connection
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ChessReq {
     pub typ: String,
@@ -27,7 +24,6 @@ pub struct ChessReq {
     pub id: Uuid,
 }
 
-// process_connection -> ws_board_cast -> process_connection
 #[derive(Serialize, Deserialize, Debug)]
 pub struct MsgBoardCast {
     pub typ: String,
@@ -43,9 +39,14 @@ pub struct ChessBoardCast {
     pub chess: Vec<Option<bool>>,
 }
 
-// user_manager -> ws_board_cast -> process_connection
 #[derive(Serialize, Deserialize, Debug)]
 pub struct OnlineUsersBoardCast {
     pub typ: String,
     pub users: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct NetworkBoardCast {
+    pub typ: String,
+    pub available: bool,
 }

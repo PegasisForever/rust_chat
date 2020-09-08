@@ -3,7 +3,7 @@ mod tools;
 
 use std::{env, io::Error};
 
-use log::info;
+use log::{debug, info, warn};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Sender};
@@ -12,31 +12,39 @@ use futures_util::{StreamExt, SinkExt};
 use futures_util::core_reexport::result::Result::Ok;
 use serde_json::{Value};
 use std::collections::HashMap;
-use crate::structs::{OnlineUsersBoardCast, NameReq, MsgReq, MsgBoardCast, ChessReq, ChessBoardCast};
+use crate::structs::{OnlineUsersBoardCast, NameReq, MsgReq, MsgBoardCast, ChessReq, ChessBoardCast, NetworkBoardCast};
 use tokio::signal;
 use std::sync::{Mutex, Arc};
 use serde_json::json;
 use crate::tools::ensure_file_exists;
 use tokio::fs;
 use uuid::Uuid;
+use std::time::SystemTime;
+use tokio::time::delay_for;
+use futures_util::core_reexport::time::Duration;
 
 
 type UsersMap = Arc<Mutex<HashMap<String, Sender<String>>>>;
 type MessageList = Arc<Mutex<Vec<MsgBoardCast>>>;
 type ChessData = Arc<Mutex<Vec<Option<bool>>>>;
+type NetworkStatus = Arc<Mutex<bool>>;
 
 const MESSAGE_PATH: &str = "chat_data/messages.json";
 const CHESS_PATH: &str = "chat_data/chess.json";
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    env::set_var("RUST_LOG", "debug");
+    env::set_var("RUST_LOG", "info");
     env_logger::init();
 
     let mut listener = TcpListener::bind("0.0.0.0:8080").await?;
     info!("Listening");
 
     let users_map: UsersMap = Arc::new(Mutex::new(HashMap::new()));
+    let users_map2 = users_map.clone();
+
+    let is_network_available: NetworkStatus = Arc::new(Mutex::new(true));
+    let is_network_available2 = is_network_available.clone();
 
     let message_list: MessageList = {
         ensure_file_exists(MESSAGE_PATH, "[]").await.unwrap();
@@ -59,10 +67,13 @@ async fn main() -> Result<(), Error> {
     tokio::select! {
         _ = async move {
             while let Ok((stream, _)) = listener.accept().await {
-                tokio::spawn(process_connection(stream, users_map.clone(), message_list.clone(), chess_data.clone()));
+                tokio::spawn(process_connection(stream, users_map.clone(), message_list.clone(), chess_data.clone(), is_network_available.clone()));
             }
         } => (),
-         _ = signal::ctrl_c() => (),
+        _ = async move {
+            network_monitor(users_map2, is_network_available2).await;
+        } => (),
+        _ = signal::ctrl_c() => (),
     }
 
     {
@@ -76,6 +87,80 @@ async fn main() -> Result<(), Error> {
 
     info!("stopped");
     Ok(())
+}
+
+async fn ping() -> Option<u32> {
+    let start_time = SystemTime::now();
+
+    tokio::select! {
+        resp = reqwest::get("https://dev.pegasis.site/generate_204") => {
+            if resp.is_ok() {
+                Some(SystemTime::now().duration_since(start_time).unwrap().as_millis() as u32)
+            }else {
+                None
+            }
+        }
+        _ = delay_for(Duration::from_millis(900)) => None
+    }
+}
+
+async fn network_monitor(users_map: UsersMap, is_network_available: NetworkStatus) {
+    let mut a = Some(0u32);
+    let mut b = Some(0u32);
+    let mut c;
+    loop {
+        let start_time = SystemTime::now();
+        c = b;
+        b = a;
+        a = ping().await;
+
+        let mut sum = 0;
+        let mut count = 0;
+        if let Some(latency) = a {
+            sum += latency;
+            count += 1;
+        }
+        if let Some(latency) = b {
+            sum += latency;
+            count += 1;
+        }
+        if let Some(latency) = c {
+            sum += latency;
+            count += 1;
+        }
+
+        let mut is_network_available = is_network_available.lock().unwrap();
+        if count == 0 {
+            debug!("Internet unavailable");
+            if *is_network_available {
+                warn!("Internet becomes unavailable");
+                *is_network_available = false;
+                board_cast_network(&users_map, *is_network_available);
+            }
+        } else {
+            debug!("Ping: {}", sum / count);
+            if !*is_network_available {
+                info!("Internet becomes available");
+                *is_network_available = true;
+                board_cast_network(&users_map, *is_network_available);
+            }
+        }
+
+        delay_for(Duration::from_secs(1) - SystemTime::now().duration_since(start_time).unwrap()).await
+    }
+}
+
+fn board_cast_network(users_map: &UsersMap, is_network_available: bool) {
+    let bc = NetworkBoardCast {
+        typ: "network".to_string(),
+        available: is_network_available,
+    };
+
+    let text = serde_json::to_string(&bc).unwrap();
+    let mut users_map = users_map.lock().unwrap();
+    for (_, tx) in users_map.iter_mut() {
+        tx.try_send(text.clone()).unwrap();
+    }
 }
 
 fn user_joined(name: &Option<String>, users_map: &UsersMap, ws_tx: &Sender<String>) {
@@ -131,7 +216,7 @@ fn reply_and_board_cast(mut json: Value, users_map: &UsersMap, reply_user: &str,
     }
 }
 
-async fn process_connection(stream: TcpStream, users_map: UsersMap, message_list: MessageList, chess_data: ChessData) {
+async fn process_connection(stream: TcpStream, users_map: UsersMap, message_list: MessageList, chess_data: ChessData, is_network_available: NetworkStatus) {
     let ws = tokio_tungstenite::accept_async(stream).await;
     if ws.is_err() {
         return;
@@ -159,6 +244,7 @@ async fn process_connection(stream: TcpStream, users_map: UsersMap, message_list
                                     "messages": &*message_list.lock().unwrap(),
                                     "chess": &*chess_data.lock().unwrap(),
                                     "users": get_user_list_json(&users_map),
+                                    "is_network_available": *is_network_available.lock().unwrap(),
                                     "id": req.id,
                                 });
                                 ws_tx.send(res.to_string()).await.unwrap();

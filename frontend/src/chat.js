@@ -6,7 +6,7 @@ import ChessSelect from "./chessSelect"
 import ChessClear from "./chessClear"
 import ChatList from "./chatList"
 
-const WS_URL = "ws://192.168.0.81:8080"
+const WS_URL = "ws://localhost:8080"
 
 export default class ChatPage extends Component {
     state = {
@@ -14,6 +14,7 @@ export default class ChatPage extends Component {
         messages: [],
         chess: [],
         input: "",
+        isNetworkAvailable: true,
         isBlack: true,
     }
     chatListRef = createRef()
@@ -34,6 +35,10 @@ export default class ChatPage extends Component {
                 this.setState({
                     chess: json["chess"],
                 })
+            } else if (json["typ"] === "network") {
+                this.setState({
+                    isNetworkAvailable: json["available"],
+                })
             }
         }
 
@@ -45,6 +50,7 @@ export default class ChatPage extends Component {
                     users: json["users"],
                     messages: json["messages"],
                     chess: json["chess"],
+                    isNetworkAvailable: json["is_network_available"],
                 },
                 this.scrollToBottom,
             )
@@ -118,7 +124,11 @@ export default class ChatPage extends Component {
 
     render() {
         return <div class="chat-page-layout">
-            <div class={"online-user-column"}>
+            <div class="online-user-column">
+                <div class="network-indicator"
+                     style={{backgroundColor: this.state.isNetworkAvailable ? "#008000" : "#b00020"}}>
+                    {this.state.isNetworkAvailable ? "Network available" : "Network unavailable"}
+                </div>
                 <button onclick={this.onLogout}>
                     Logout
                 </button>
