@@ -1,6 +1,7 @@
 import {Component, createRef} from "preact"
 import {getName} from "./tools"
 import ServerCon from "./ServerCon"
+import ChessBoard from "./chess"
 
 export default class ChatPage extends Component {
     state = {
@@ -85,8 +86,8 @@ export default class ChatPage extends Component {
                     <button type="submit">Send</button>
                 </form>
             </div>
-            <div>
-                awa
+            <div class="chess-board-column">
+                <ChessBoard/>
             </div>
         </div>
     }
