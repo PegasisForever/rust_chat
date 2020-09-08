@@ -1,4 +1,4 @@
-import {Component} from "preact"
+import {Component, createRef} from "preact"
 import {getName} from "./tools"
 import ServerCon from "./ServerCon"
 
@@ -8,6 +8,7 @@ export default class ChatPage extends Component {
         messages: [],
         input: "",
     }
+    chatListRef = createRef()
 
     constructor(props) {
         super(props)
@@ -19,7 +20,7 @@ export default class ChatPage extends Component {
                 })
             } else if (json["typ"] === "msg") {
                 this.state.messages.push(json)
-                this.setState({})
+                this.setState({}, this.isAtBottom() ? this.scrollToBottom : undefined)
             }
         }
 
@@ -28,10 +29,22 @@ export default class ChatPage extends Component {
             "name": getName(),
         }).then((json) => {
             this.setState({
-                users: json["users"].sort(),
-                messages: json["messages"],
-            })
+                    users: json["users"].sort(),
+                    messages: json["messages"],
+                },
+                this.scrollToBottom,
+            )
         })
+    }
+
+    isAtBottom = () => {
+        let list = this.chatListRef.current
+        return list.scrollTop === list.scrollHeight - list.clientHeight
+    }
+
+    scrollToBottom = () => {
+        let list = this.chatListRef.current
+        list.scrollTop = list.scrollHeight - list.clientHeight
     }
 
     onSend = e => {
@@ -42,7 +55,7 @@ export default class ChatPage extends Component {
             "text": this.state.input,
         }).then((json) => {
             this.state.messages.push(json)
-            this.setState({})
+            this.setState({}, this.isAtBottom() ? this.scrollToBottom : undefined)
         })
         this.setState({
             input: "",
@@ -64,7 +77,7 @@ export default class ChatPage extends Component {
                 </div>
             </div>
             <div class="chat-column" style={{flexGrow: 1}}>
-                <div class="chat-list">
+                <div ref={this.chatListRef} class="chat-list">
                     {this.state.messages.map((msg) => <p key={msg}>{msg.name + ": " + msg.text}</p>)}
                 </div>
                 <form class="input-bar" onSubmit={this.onSend}>
