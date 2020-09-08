@@ -3,6 +3,7 @@ import {getName} from "./tools"
 import ServerCon from "./ServerCon"
 import ChessBoard, {CHESS_SIZE} from "./chess"
 import ChessSelect from "./chessSelect"
+import ChessClear from "./chessClear"
 
 export default class ChatPage extends Component {
     state = {
@@ -77,8 +78,7 @@ export default class ChatPage extends Component {
         })
     }
 
-    onChessClick = (x, y) => {
-        this.state.chess[y * CHESS_SIZE + x] = this.state.isBlack
+    updateChess = () => {
         this.connection.request({
             "typ": "chess",
             "time": Date.now(),
@@ -88,6 +88,17 @@ export default class ChatPage extends Component {
                 chess: json["chess"],
             })
         })
+    }
+    onChessClick = (x, y) => {
+        this.state.chess[y * CHESS_SIZE + x] = this.state.isBlack
+        this.updateChess()
+    }
+
+    onChessClear = () => {
+        for (let i = 0; i < this.state.chess.length; i++) {
+            this.state.chess[i] = null
+        }
+        this.updateChess()
     }
 
     render() {
@@ -108,6 +119,7 @@ export default class ChatPage extends Component {
                 </form>
             </div>
             <div class="chess-board-column">
+                <ChessClear onClick={this.onChessClear}/>
                 <ChessBoard data={this.state.chess} onClick={this.onChessClick}/>
                 <ChessSelect isBlack={this.state.isBlack}
                              onChange={(isBlack) => this.setState({isBlack: isBlack})}/>

@@ -106,3 +106,15 @@ body {
 .chess-select-bar > .selected {
     background-color: rgba(0,0,0,0.15);
 }
+
+.chess-clear-bar{
+    display: flex;
+    justify-content: flex-end;
+}
+
+.chess-clear-bar > span{
+    user-select: none;
+    cursor: pointer;
+    margin: 8px;
+    padding: 5px;
+}
