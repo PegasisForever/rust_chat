@@ -100,7 +100,8 @@ fn get_user_list_json(users_map: &UsersMap) -> Vec<String> {
 }
 
 fn send_user_list_bc(users_map: &UsersMap, excluded_user: &str) {
-    let user_list = get_user_list_json(users_map);
+    let mut user_list = get_user_list_json(users_map);
+    user_list.sort_unstable();
     let bc = OnlineUsersBoardCast {
         typ: "users".to_string(),
         users: user_list,
@@ -173,7 +174,9 @@ async fn process_connection(stream: TcpStream, users_map: UsersMap, message_list
 
                                 let json = serde_json::to_value(&bc).unwrap();
                                 reply_and_board_cast(json, &users_map, name.as_ref().unwrap(), &req.id);
-                                message_list.lock().unwrap().push(bc);
+                                let mut message_list = message_list.lock().unwrap();
+                                message_list.push(bc);
+                                message_list.sort_unstable_by_key(|item| item.time)
                             }
                         } else if json["typ"] == "chess" && name.is_some() {
                             if let Ok(req) = serde_json::from_value::<ChessReq>(json.clone()) {

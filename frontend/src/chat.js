@@ -21,7 +21,7 @@ export default class ChatPage extends Component {
         this.connection.onmessage = (json) => {
             if (json["typ"] === "users") {
                 this.setState({
-                    users: json["users"].sort(),
+                    users: json["users"],
                 })
             } else if (json["typ"] === "msg") {
                 this.state.messages.push(json)
@@ -38,7 +38,7 @@ export default class ChatPage extends Component {
             "name": getName(),
         }).then((json) => {
             this.setState({
-                    users: json["users"].sort(),
+                    users: json["users"],
                     messages: json["messages"],
                     chess: json["chess"],
                 },
