@@ -16,6 +16,7 @@ export default class ChatPage extends Component {
         isBlack: true,
     }
     chatListRef = createRef()
+    ringTong = new Audio("assets/argon.mp3")
 
     constructor(props) {
         super(props)
@@ -26,9 +27,11 @@ export default class ChatPage extends Component {
                     users: json["users"],
                 })
             } else if (json["typ"] === "msg") {
-                window.focus()
                 this.state.messages.push(json)
                 this.setState({}, this.isAtBottom() ? this.scrollToBottom : undefined)
+                if (!this.isAtBottom() || document.visibilityState !== "visible") {
+                    this.ringTong.play()
+                }
             } else if (json["typ"] === "chess") {
                 this.setState({
                     chess: json["chess"],
