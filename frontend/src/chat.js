@@ -117,6 +117,7 @@ export default class ChatPage extends Component {
     }
 
     componentWillUnmount() {
+        this.connection.reconnect = false
         this.connection.disconnect()
     }
 
@@ -125,7 +126,7 @@ export default class ChatPage extends Component {
             <div class="online-user-column">
                 <div class="network-indicator"
                      style={{backgroundColor: this.state.isNetworkAvailable ? "#008000" : "#b00020"}}>
-                    {this.state.isNetworkAvailable ? "Network available" : "Network unavailable"}
+                    {this.state.isNetworkAvailable ? "Internet Available" : "Internet Unavailable"}
                 </div>
                 <button onclick={this.onLogout}>
                     Logout

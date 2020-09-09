@@ -5,14 +5,30 @@ export default class ServerCon {
     pendingReqs = new Map()
     onmessage = (_) => {
     }
+    reconnect = true
 
     constructor(addr) {
         this.ws = new WebSocket(addr)
 
-        this.ws.onerror = () => {
-            alert("Websocket error")
+        this.setupWs(addr)
+    }
+
+    setupWs(addr) {
+        if (this.ws) this.ws.close()
+        this.ws = new WebSocket(addr)
+
+        this.ws.onclose = (ev) => {
+            if (this.reconnect) {
+                console.error(ev)
+                this.setupWs(addr)
+            }
+        }
+        this.ws.onerror = (ev) => {
+            console.error(ev)
+            this.setupWs(addr)
         }
         this.ws.onopen = () => {
+            console.log("ws connected")
             this.queue.forEach((json) => {
                 this.ws.send(JSON.stringify(json))
             })
