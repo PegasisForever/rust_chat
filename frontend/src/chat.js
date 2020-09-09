@@ -133,7 +133,9 @@ export default class ChatPage extends Component {
                      style={{backgroundColor: this.state.isNetworkAvailable ? "#008000" : "#b00020"}}>
                     {this.state.isNetworkAvailable ? "Internet Available" : "Internet Unavailable"}
                 </div>
-                <button onclick={this.onLogout}>
+                <a href="/wikipedia_en_all_nopic_2020-08/A/User:The_other_Kiwix_guy/Landing" target="_blank">Wikipedia</a>
+                <br/>
+                <button class="logout-btn" onclick={this.onLogout}>
                     Logout
                 </button>
                 <h2>Online Users</h2>
