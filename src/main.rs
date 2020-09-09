@@ -38,8 +38,10 @@ async fn main() -> Result<(), Error> {
     env::set_var("RUST_LOG", "info");
     env_logger::init();
 
-    let mut listener = TcpListener::bind(ADDRESS).await?;
-    info!("Listening on {}", ADDRESS);
+    let server_address = env::args().collect::<Vec<String>>().get(1)
+        .map_or_else(|| String::from(ADDRESS), |arg| String::from(arg));
+    let mut listener = TcpListener::bind(&server_address).await?;
+    info!("Listening on {}", &server_address);
 
     let users_map: UsersMap = Arc::new(Mutex::new(HashMap::new()));
     let users_map2 = users_map.clone();
