@@ -31,14 +31,15 @@ type NetworkStatus = Arc<Mutex<bool>>;
 
 const MESSAGE_PATH: &str = "chat_data/messages.json";
 const CHESS_PATH: &str = "chat_data/chess.json";
+const ADDRESS: &str = "0.0.0.0:8080";
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     env::set_var("RUST_LOG", "info");
     env_logger::init();
 
-    let mut listener = TcpListener::bind("0.0.0.0:8080").await?;
-    info!("Listening");
+    let mut listener = TcpListener::bind(ADDRESS).await?;
+    info!("Listening on {}", ADDRESS);
 
     let users_map: UsersMap = Arc::new(Mutex::new(HashMap::new()));
     let users_map2 = users_map.clone();
@@ -85,7 +86,7 @@ async fn main() -> Result<(), Error> {
     }
 
 
-    info!("stopped");
+    info!("Stopped");
     Ok(())
 }
 
@@ -222,7 +223,7 @@ async fn process_connection(stream: TcpStream, users_map: UsersMap, message_list
         return;
     }
 
-    info!("New WebSocket connection");
+    info!("New websocket connection");
     let (mut write, mut read) =
         ws.unwrap().split();
     let (mut ws_tx, mut ws_rx) = mpsc::channel::<String>(32);
@@ -237,6 +238,7 @@ async fn process_connection(stream: TcpStream, users_map: UsersMap, message_list
                             if let Ok(req) = serde_json::from_value::<NameReq>(json.clone()) {
                                 name = Some(req.name);
 
+                                info!("{} joined", name.as_ref().unwrap());
                                 user_joined(&name, &users_map, &ws_tx);
 
                                 let res = json!({
@@ -251,6 +253,8 @@ async fn process_connection(stream: TcpStream, users_map: UsersMap, message_list
                             }
                         } else if json["typ"] == "msg" && name.is_some() {
                             if let Ok(req) = serde_json::from_value::<MsgReq>(json.clone()) {
+                                info!("{}: {}", name.as_ref().unwrap(), &req.text);
+
                                 let bc = MsgBoardCast {
                                     typ: "msg".to_string(),
                                     time: req.time,
@@ -266,6 +270,8 @@ async fn process_connection(stream: TcpStream, users_map: UsersMap, message_list
                             }
                         } else if json["typ"] == "chess" && name.is_some() {
                             if let Ok(req) = serde_json::from_value::<ChessReq>(json.clone()) {
+                                info!("{} changed the chess board", name.as_ref().unwrap());
+
                                 let bc = ChessBoardCast {
                                     typ: "chess".to_string(),
                                     time: req.time,
@@ -284,6 +290,7 @@ async fn process_connection(stream: TcpStream, users_map: UsersMap, message_list
         }
 
         if name.is_some() {
+            info!("{} left", name.as_ref().unwrap());
             user_left(&name, &users_map);
         }
     };
