@@ -20,7 +20,7 @@ export default class ChatPage extends Component {
     constructor(props) {
         super(props)
         this.connection = new ServerCon(getWsUrl())
-        this.connection.onmessage = (json) => {
+        this.connection.onMessage = (json) => {
             if (json["typ"] === "users") {
                 this.setState({
                     users: json["users"],
@@ -40,19 +40,21 @@ export default class ChatPage extends Component {
             }
         }
 
-        this.connection.request({
-            "typ": "name",
-            "name": getName(),
-        }).then((json) => {
-            this.setState({
-                    users: json["users"],
-                    messages: json["messages"],
-                    chess: json["chess"],
-                    isNetworkAvailable: json["is_network_available"],
-                },
-                this.scrollToBottom,
-            )
-        })
+        this.connection.onConnected = () => {
+            this.connection.request({
+                "typ": "name",
+                "name": getName(),
+            }).then((json) => {
+                this.setState({
+                        users: json["users"],
+                        messages: json["messages"],
+                        chess: json["chess"],
+                        isNetworkAvailable: json["is_network_available"],
+                    },
+                    this.scrollToBottom,
+                )
+            })
+        }
     }
 
     isAtBottom = () => {

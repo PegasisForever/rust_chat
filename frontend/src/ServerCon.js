@@ -3,13 +3,13 @@ import uuid from "uuid-random"
 export default class ServerCon {
     queue = []
     pendingReqs = new Map()
-    onmessage = (_) => {
+    onMessage = (_) => {
+    }
+    onConnected=()=>{
     }
     reconnect = true
 
     constructor(addr) {
-        this.ws = new WebSocket(addr)
-
         this.setupWs(addr)
     }
 
@@ -29,6 +29,7 @@ export default class ServerCon {
         }
         this.ws.onopen = () => {
             console.log("ws connected")
+            this.onConnected()
             this.queue.forEach((json) => {
                 this.ws.send(JSON.stringify(json))
             })
@@ -41,7 +42,7 @@ export default class ServerCon {
             if (resolutionFunc) {
                 resolutionFunc(json)
             } else {
-                this.onmessage(json)
+                this.onMessage(json)
             }
         }
     }
