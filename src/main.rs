@@ -283,7 +283,9 @@ async fn process_connection(stream: TcpStream, users_map: UsersMap, message_list
             }
         }
 
-        user_left(&name, &users_map);
+        if name.is_some() {
+            user_left(&name, &users_map);
+        }
     };
 
     let send_task = async move {
