@@ -5,7 +5,7 @@ export default class ServerCon {
     pendingReqs = new Map()
     onMessage = (_) => {
     }
-    onConnected=()=>{
+    onConnected = () => {
     }
     reconnect = true
 

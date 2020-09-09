@@ -32,6 +32,6 @@ export function getWsUrl() {
     if (!process.env.NODE_ENV || process.env.NODE_ENV === "development") {
         return "ws://localhost:8080"
     } else {
-        return "ws://pega.local/ws"
+        return "ws://pega.local/ws/"
     }
 }
