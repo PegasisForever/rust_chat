@@ -24,7 +24,7 @@ use tokio::time::delay_for;
 use futures_util::core_reexport::time::Duration;
 
 
-type UsersMap = Arc<Mutex<HashMap<String, Sender<String>>>>;
+type UsersMap = Arc<Mutex<HashMap<String, Sender<Message>>>>;
 type MessageList = Arc<Mutex<Vec<MsgBoardCast>>>;
 type ChessData = Arc<Mutex<Vec<Option<bool>>>>;
 type NetworkStatus = Arc<Mutex<bool>>;
@@ -160,11 +160,11 @@ fn board_cast_network(users_map: &UsersMap, is_network_available: bool) {
     let text = serde_json::to_string(&bc).unwrap();
     let mut users_map = users_map.lock().unwrap();
     for (_, tx) in users_map.iter_mut() {
-        tx.try_send(text.clone()).unwrap();
+        tx.try_send(Message::Text(text.clone())).unwrap();
     }
 }
 
-fn user_joined(name: &Option<String>, users_map: &UsersMap, ws_tx: &Sender<String>) {
+fn user_joined(name: &Option<String>, users_map: &UsersMap, ws_tx: &Sender<Message>) {
     let name_ref = name.as_ref().unwrap();
     users_map.lock().unwrap().insert(String::from(name_ref), ws_tx.clone());
     send_user_list_bc(users_map, name_ref);
@@ -197,7 +197,7 @@ fn send_user_list_bc(users_map: &UsersMap, excluded_user: &str) {
     let mut users_map = users_map.lock().unwrap();
     for (name, tx) in users_map.iter_mut() {
         if name != excluded_user {
-            tx.try_send(text.clone()).unwrap();
+            tx.try_send(Message::Text(text.clone())).unwrap();
         }
     }
 }
@@ -210,9 +210,9 @@ fn reply_and_board_cast(mut json: Value, users_map: &UsersMap, reply_user: &str,
     let mut users_map = users_map.lock().unwrap();
     for (name, tx) in users_map.iter_mut() {
         if name != reply_user {
-            tx.try_send(others_text.clone()).unwrap();
+            tx.try_send(Message::Text(others_text.clone())).unwrap();
         } else {
-            tx.try_send(res_text.clone()).unwrap();
+            tx.try_send(Message::Text(res_text.clone())).unwrap();
         }
     }
 }
@@ -226,7 +226,7 @@ async fn process_connection(stream: TcpStream, users_map: UsersMap, message_list
     info!("New websocket connection");
     let (mut write, mut read) =
         ws.unwrap().split();
-    let (mut ws_tx, mut ws_rx) = mpsc::channel::<String>(32);
+    let (mut ws_tx, mut ws_rx) = mpsc::channel::<Message>(32);
 
     let receive_task = async move {
         let mut name: Option<String> = None;
@@ -249,7 +249,7 @@ async fn process_connection(stream: TcpStream, users_map: UsersMap, message_list
                                     "is_network_available": *is_network_available.lock().unwrap(),
                                     "id": req.id,
                                 });
-                                ws_tx.send(res.to_string()).await.unwrap();
+                                ws_tx.send(Message::Text(res.to_string())).await.unwrap();
                             }
                         } else if json["typ"] == "msg" && name.is_some() {
                             if let Ok(req) = serde_json::from_value::<MsgReq>(json.clone()) {
@@ -285,6 +285,9 @@ async fn process_connection(stream: TcpStream, users_map: UsersMap, message_list
                     }
                 }
                 Ok(Message::Close(None)) => { break; }
+                Ok(Message::Ping(payload)) => {
+                    ws_tx.send(Message::Pong(payload)).await.unwrap();
+                }
                 _ => {}
             }
         }
@@ -297,7 +300,7 @@ async fn process_connection(stream: TcpStream, users_map: UsersMap, message_list
 
     let send_task = async move {
         while let Some(msg) = ws_rx.recv().await {
-            write.send(Message::Text(msg)).await.unwrap();
+            write.send(msg).await.unwrap();
         }
     };
 
