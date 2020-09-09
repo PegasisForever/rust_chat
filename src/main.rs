@@ -103,7 +103,7 @@ async fn ping() -> Option<u32> {
                 None
             }
         }
-        _ = delay_for(Duration::from_millis(900)) => None
+        _ = delay_for(Duration::from_millis(1400)) => None
     }
 }
 
@@ -149,7 +149,7 @@ async fn network_monitor(users_map: UsersMap, is_network_available: NetworkStatu
             }
         }
 
-        delay_for(Duration::from_secs(1) - SystemTime::now().duration_since(start_time).unwrap()).await
+        delay_for(Duration::from_millis(1500) - SystemTime::now().duration_since(start_time).unwrap()).await
     }
 }
 
