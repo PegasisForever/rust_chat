@@ -104,11 +104,11 @@ input {
 }
 
 .chess-board > .black {
-    background-image: url("black.svg");
+    background-image: url("assets/black.svg");
 }
 
 .chess-board > .white {
-    background-image: url("white.svg");
+    background-image: url("assets/white.svg");
 }
 
 .chess-select-bar {
