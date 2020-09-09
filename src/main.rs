@@ -225,7 +225,6 @@ async fn process_connection(stream: TcpStream, users_map: UsersMap, message_list
         return;
     }
 
-    info!("New websocket connection");
     let (mut write, mut read) =
         ws.unwrap().split();
     let (mut ws_tx, mut ws_rx) = mpsc::channel::<Message>(32);
@@ -286,11 +285,14 @@ async fn process_connection(stream: TcpStream, users_map: UsersMap, message_list
                         }
                     }
                 }
-                Ok(Message::Close(None)) => { break; }
+                Ok(Message::Close(_)) => { break; }
                 Ok(Message::Ping(payload)) => {
+                    info!("received ping {:?}", &payload);
                     ws_tx.send(Message::Pong(payload)).await.unwrap();
                 }
-                _ => {}
+                other => {
+                    warn!("{:?}", other);
+                }
             }
         }
 
@@ -310,7 +312,4 @@ async fn process_connection(stream: TcpStream, users_map: UsersMap, message_list
         _ = receive_task => (),
         _ = send_task => (),
     }
-
-
-    info!("WebSocket closed");
 }
