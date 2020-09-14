@@ -8,6 +8,7 @@ export default class ServerCon {
     onConnected = () => {
     }
     reconnect = true
+    reconnectCount = 0
 
     constructor(addr) {
         this.setupWs(addr)
@@ -18,9 +19,12 @@ export default class ServerCon {
         this.ws = new WebSocket(addr)
 
         this.ws.onclose = (ev) => {
-            if (this.reconnect) {
+            if (this.reconnect && this.reconnectCount < 10) {
                 console.error(ev)
+                this.reconnectCount++
                 this.setupWs(addr)
+            } else if (this.reconnectCount >= 10) {
+                alert("Failed to reconnect, please refresh.")
             }
         }
         this.ws.onerror = (ev) => {
