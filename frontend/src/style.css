@@ -154,6 +154,10 @@ input {
     margin-top: 16px;
 }
 
+.online-user-column {
+    min-width: 220px;
+}
+
 .online-user-column > * {
     flex-shrink: 0;
     margin-left: 16px;
@@ -180,6 +184,6 @@ input {
     margin-bottom: 16px;
 }
 
-.logout-btn{
+.logout-btn {
     margin-top: 16px;
 }
